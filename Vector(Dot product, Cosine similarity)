@@ -1,0 +1,93 @@
+# Day 1 – Vectors, Dot Product, Cosine Similarity
+
+*ML journey – rough notes*
+
+## 1. Vectors
+- A vector = an ordered list of numbers. Each position (dimension) means something.
+  - house → `[bedrooms, sq_ft, age]`
+  - movie → `[action, comedy, romance]`
+- Computers only understand numbers → everything in ML (words, images, songs) becomes a vector first.
+- Picture it as an arrow. **Similar things point in similar directions.**
+- Basic ops: add (position by position), scale (multiply every number).
+
+## 2. Dot product
+- Multiply matching positions, then add up → **one number**.
+- `[1,2] · [3,4] = 1*3 + 2*4 = 11`
+- Measures how much two vectors **agree**.
+- Example: taste `[0.8,0.2,0]` · movie A `[0.9,0.1,0]` = 0.74 vs movie B `[0.1,0.8,0.7]` = 0.24 → recommend A.
+- Used in: recommendations, every neuron in a neural network, attention in LLMs.
+- Weakness: bigger numbers inflate the score even if the direction is the same.
+
+## 3. Magnitude
+- Length of a vector = √(sum of squares) = √(v · v)
+- `|[0,1,1]| = √2 ≈ 1.41`
+
+## 4. Cosine similarity
+- `cos(a, b) = dot(a, b) / (|a| * |b|)`
+- Compares **direction only**, ignores size.
+- Scale: **1** = same direction, **0** = unrelated, **-1** = opposite
+- `[0,1,1]` vs `[0,10,10]` → 1.0 | `[1,0]` vs `[0,1]` → 0
+- Standard way to compare embeddings (semantic search, RAG).
+
+## 5. My code##manual functions(There are builtin functions in numpy for finding dot product and cosine similarity) -- np.dot(vectora, vectorb), np.linalg.norm(a) -  finds length or magnitude(square root of the sum of the squares of each number.)
+
+```python
+import math
+
+def dot(a, b):
+    total = 0.0
+    for i in range(len(a)):
+        total += a[i] * b[i]
+    return total
+
+def mag(v):
+    return math.sqrt(dot(v, v))
+
+def cosine_similarity(a, b):
+    return dot(a, b) / (mag(a) * mag(b))
+
+def most_similar(word):
+    target = words[word]
+    best_word, best_score = None, -1
+    for other in words:
+        if other == word:
+            continue
+        score = cosine_similarity(target, words[other])
+        if score > best_score:
+            best_word, best_score = other, score
+    return best_word
+```
+
+- Toy embeddings: `[royalty, maleness, animal, food]`
+- `most_similar("cat")` → dog, `most_similar("king")` → man
+- **king − man + woman = [0.9, -0.8, 0, 0] → queen** 👑
+  - Embeddings capture *relationships*, not just similarity (Word2Vec, 2013).
+
+## 6. Bugs I hit (lessons)
+- Hardcoded `range(0,3)` → would silently ignore the 4th dimension. Use `len(a)`.
+- Used `result[i]` instead of `result[j]` → loop variable leaks after the loop, got 0.0.
+- Re-running a Colab cell kept appending to an old list (list defined in another cell).
+- Rounding inside functions → small errors (0.9917 vs 0.991). Round only when printing.
+- Passed **names** (`"king"`) instead of **vectors** (`words["king"]`).
+- Skipping matches in the king−man+woman search skipped *queen* → got "woman".
+- `0.09000000000000001` = floating-point error, normal and harmless.
+
+👉 **Big lesson: none of these crashed. They silently gave wrong answers. Always know the expected answer before running code.**
+
+## 7. Side notes – how text becomes vectors
+- **"Hello" → tokens → token IDs → embedding table lookup → vector → refined by context (attention)**
+- **Tokenization:** BPE (Byte Pair Encoding) merges frequent character pairs. Common word = 1 token, rare word = several pieces.
+- **BPE → tokens. Training → vectors.** Two separate steps.
+- Embedding table: one vector per token, starts random, learned during training, frozen after.
+- Each model (Claude, GPT, Llama) has its own tokenizer and its own table.
+- **Training** = loss + gradient descent. **Searching** = cosine similarity.
+
+## 8. Side notes – vector databases & RAG
+- Vector database (Pinecone, Chroma, pgvector) = stores lots of vectors and finds the most similar fast.
+- Companies don't train embeddings; they use a **pre-trained embedding model**.
+- Company pipeline: docs → chunks → embedding model → one vector per chunk → vector DB
+- Query: question → same embedding model → cosine search → top chunks → LLM writes answer
+- = **RAG (Retrieval-Augmented Generation)**. My `most_similar` = the retrieval step at tiny scale.
+
+---
+**Next (Day 2):** matrices & matrix multiplication = many dot products at once = one neural network layer.
